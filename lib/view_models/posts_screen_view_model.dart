@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:ceiba_user_list/models/db_helper.dart';
 import 'package:ceiba_user_list/models/post_model.dart';
 import 'package:ceiba_user_list/services/post_service.dart';
 
@@ -10,13 +11,23 @@ class PostsScreenViewModel {
 
   List<Posts> _posts = [];
   List<Posts> _filteredPosts = [];
+  final DbHelper _dbHelper = DbHelper();
 
-  void init(int userId) {
-    PostService.getPostsByUserId(userId).then((postsFromServer) {
-      _posts = postsFromServer;
-      _filteredPosts = _posts;
-      _filteredPostsController.add(_filteredPosts);
-    });
+  void init(int userId) async {
+    try {
+      _posts = await _dbHelper.getPostList(userId);
+      if (_posts.isEmpty) {
+          _posts = await PostService.getPostsByUserId(userId);
+          for (var element in _posts) {
+          _dbHelper.insertPosts(element);
+        }
+      }
+        _filteredPosts = _posts;
+          _filteredPostsController.add(_filteredPosts);
+    } catch (error) {
+      _filteredPostsController.addError(error);
+    }
+    
   }
 
   void filterPosts(String filter) {

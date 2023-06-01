@@ -14,6 +14,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final HomeScreenViewModel _viewModel = HomeScreenViewModel();
+  bool _isListEmpty = false; // Estado para indicar si la lista está vacía
 
   @override
   void initState() {
@@ -50,46 +51,54 @@ class _HomeScreenState extends State<HomeScreen> {
                     Theme.of(context).inputDecorationTheme.enabledBorder,
               ),
               onChanged: (string) {
-                _viewModel.filterUsers(string);
+                _isListEmpty = _viewModel.filterUsers(string);
+                setState(() {}); // Actualizar el estado al cambiar el filtro
               },
             ),
           ),
           Expanded(
-            child: StreamBuilder<List<UserModel>>(
-              stream: _viewModel.filteredUsersStream,
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  final users = snapshot.data!;
-                  return ListView.separated(
-                    padding: const EdgeInsets.all(10.0),
-                    itemCount: users.length,
-                    separatorBuilder: (BuildContext context, int index) =>
-                        const Divider(color: Colors.transparent),
-                    itemBuilder: (BuildContext context, int index) {
-                      return UserCard(
-                        user: users[index],
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => PostsScreen(
-                                    user: users[index])),
-                          );
-                        },
-                      );
+            child: _isListEmpty // Comprobar si la lista está vacía
+                ? const Center(
+                    child: Text('List is empty'),
+                  )
+                : StreamBuilder<List<UserModel>>(
+                    stream: _viewModel.filteredUsersStream,
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData) {
+                        final users = snapshot.data!;
+                        return ListView.separated(
+                          padding: const EdgeInsets.all(10.0),
+                          itemCount: users.length,
+                          separatorBuilder:
+                              (BuildContext context, int index) =>
+                                  const Divider(color: Colors.transparent),
+                          itemBuilder: (BuildContext context, int index) {
+                            return UserCard(
+                              user: users[index],
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => PostsScreen(
+                                      user: users[index],
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        );
+                      } else if (snapshot.hasError) {
+                        return const Center(
+                          child: Text('Error al cargar los usuarios.'),
+                        );
+                      } else {
+                        return const Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      }
                     },
-                  );
-                } else if (snapshot.hasError) {
-                  return const Center(
-                    child: Text('Error al cargar los usuarios.'),
-                  );
-                } else {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
-                }
-              },
-            ),
+                  ),
           ),
         ],
       ),
